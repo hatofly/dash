@@ -196,8 +196,8 @@ export default class Simulator {
     this.chaseCameraControls.minDistance = 4;
     this.chaseCameraControls.maxDistance = 5000;
     this.chaseCameraControls.maxPolarAngle = Math.PI / 2.02;
-    this.chaseCameraControls.enablePan = false; // パン操作を無効化
-    this.chaseCameraControls.enabled = false;  // ドラッグ操作を無効化
+    this.chaseCameraControls.enablePan = false;
+    this.chaseCameraControls.enabled = false;
     this._resetChaseCamera();
 
     this.freeCamera = new THREE.PerspectiveCamera(55, domElement.clientWidth / domElement.clientHeight, 1, 10000);
@@ -229,9 +229,9 @@ export default class Simulator {
     this.cameraButtons = {};
 
     ['free', 'chase', 'topDown'].forEach(c => {
-        const cameraButton = document.getElementById(`camera-${c}`);
-        cameraButton.addEventListener('click', () => this.changeCamera(c));
-        this.cameraButtons[c] = cameraButton;
+      const cameraButton = document.getElementById(`camera-${c}`);
+      cameraButton.addEventListener('click', () => this.changeCamera(c));
+      this.cameraButtons[c] = cameraButton;
     });
 
     this.switchTo2DButton = document.getElementById('camera-2D');
@@ -240,7 +240,7 @@ export default class Simulator {
     this.switchTo3DButton.addEventListener('click', this.switchTo3D.bind(this));
 
     this.switchTo3D();
-}
+  }
 
   _resetFreeCamera() {
     this.freeCameraControls.position0.copy(this.chaseCamera.position);
@@ -251,18 +251,9 @@ export default class Simulator {
 
   _resetChaseCamera() {
     const pos = this.car.position;
-    const dirVector = THREE.Vector2.fromAngle(this.car.rotation).multiplyScalar(1); // 車両前方3mに配置
-    const cameraHeight = 1.5; // カメラの高さ
-
-    // カメラを車両の少し前方に配置
-    this.chaseCamera.position.set(
-        pos.x + dirVector.x, // 車両の前方
-        cameraHeight,        // 高さ
-        pos.y + dirVector.y
-    );
-
-    // カメラの向きを車両の現在位置に合わせる
-    this.chaseCamera.lookAt(pos.x+dirVector.x*20, cameraHeight, pos.y+dirVector.y*20);
+    const dirVector = THREE.Vector2.fromAngle(this.car.rotation).multiplyScalar(-20);
+    this.chaseCamera.position.set(pos.x + dirVector.x, 8, pos.y + dirVector.y);
+    this.chaseCamera.lookAt(pos.x, 0, pos.y);
   }
 
   _resetTopDownCamera() {
@@ -720,29 +711,30 @@ export default class Simulator {
 
       const carPosition = this.car.position;
       const carRotation = this.car.rotation;
+      const carRearAxle = this.car.rearAxlePosition;
+      const carVelocity = this.car.velocity;
 
-      // カメラの位置を車両の少し前方に設定
-      const dirVector = THREE.Vector2.fromAngle(carRotation).multiplyScalar(1);
-      this.chaseCamera.position.set(
-          carPosition.x + dirVector.x,
-          2, // 高さ
-          carPosition.y + dirVector.y
-      );
+      const positionOffset = { x: carPosition.x - prevCarPosition.x, y: 0, z: carPosition.y - prevCarPosition.y };
+      this.chaseCamera.position.add(positionOffset);
+      this.chaseCameraControls.target.set(carPosition.x, 0, carPosition.y);
+      this.chaseCameraControls.rotateLeft(carRotation - prevCarRotation);
+      this.chaseCameraControls.update();
 
-      // カメラの向きを車両の現在位置に合わせる
-      this.chaseCamera.lookAt(carPosition.x+dirVector.x*20, 0, carPosition.y+dirVector.y*20);
+      this.topDownCamera.position.setX(carPosition.x);
+      this.topDownCamera.position.setZ(carPosition.y);
+      this.topDownCamera.rotation.z = -carRotation - Math.PI / 2
 
       let latitude = null;
 
       if (this.editor.lanePath.anchors.length > 1) {
-        const [s, l, aroundAnchorIndex] = this.editor.lanePath.stationLatitudeFromPosition(carPosition, this.aroundAnchorIndex);
+        const [s, l, aroundAnchorIndex] = this.editor.lanePath.stationLatitudeFromPosition(carRearAxle, this.aroundAnchorIndex);
         this.aroundAnchorIndex = aroundAnchorIndex;
 
         this.carStation = s;
         latitude = l;
       }
 
-      this.dashboard.update(controls, this.car.velocity, this.carStation, latitude, this.simulatedTime, this.averagePlanTime.average);
+      this.dashboard.update(controls, carVelocity, this.carStation, latitude, this.simulatedTime, this.averagePlanTime.average);
     }
 
     if (!this.editor.enabled && this.plannerReady) {
