@@ -251,9 +251,18 @@ export default class Simulator {
 
   _resetChaseCamera() {
     const pos = this.car.position;
-    const dirVector = THREE.Vector2.fromAngle(this.car.rotation).multiplyScalar(-20);
-    this.chaseCamera.position.set(pos.x + dirVector.x, 8, pos.y + dirVector.y);
-    this.chaseCamera.lookAt(pos.x, 0, pos.y);
+    const dirVector = THREE.Vector2.fromAngle(this.car.rotation).multiplyScalar(1); // 車両前方3mに配置
+    this.cameraHeight = 1.5; // カメラの高さ
+
+    // カメラを車両の少し前方に配置
+    this.chaseCamera.position.set(
+        pos.x + dirVector.x, // 車両の前方
+        this.cameraHeight,        // 高さ
+        pos.y + dirVector.y
+    );
+
+    // カメラの向きを車両の現在位置に合わせる
+    this.chaseCamera.lookAt(pos.x+dirVector.x*10, this.cameraHeight, pos.y+dirVector.y*10);
   }
 
   _resetTopDownCamera() {
@@ -715,8 +724,10 @@ export default class Simulator {
       const carVelocity = this.car.velocity;
 
       const positionOffset = { x: carPosition.x - prevCarPosition.x, y: 0, z: carPosition.y - prevCarPosition.y };
-      this.chaseCamera.position.add(positionOffset);
-      this.chaseCameraControls.target.set(carPosition.x, 0, carPosition.y);
+      const dirVector =  THREE.Vector2.fromAngle(carRotation).multiplyScalar(0.3);
+      //this.chaseCamera.position.add(positionOffset);
+      this.chaseCamera.position.set(carPosition.x + dirVector.x, this.cameraHeight, carPosition.y + dirVector.y);
+      this.chaseCameraControls.target.set(carPosition.x+dirVector.x*10, this.cameraHeight, carPosition.y+dirVector.y*10);
       this.chaseCameraControls.rotateLeft(carRotation - prevCarRotation);
       this.chaseCameraControls.update();
 
